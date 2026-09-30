@@ -1,0 +1,12 @@
+{
+  "experiment_name": "grokking_v1",
+  "seed": 1234,
+  "device": "auto",
+  "task": {"name": "grokking", "p": 113, "train_frac": 0.3},
+  "model": {"n_layers": 1, "n_heads": 4, "n_embd": 128, "mlp_multiplier": 4},
+  "training": {"batch_size": 100000, "train_steps": 30000, "eval_interval": 100,
+               "learning_rate": 0.001, "weight_decay": 1.0, "beta1": 0.9, "beta2": 0.98},
+  "checkpoints": {"dense_until": 30000, "dense_every": 100, "sparse_every": 0,
+                  "save_optimizer": false},
+  "output": {"create_run_dir": true, "save_checkpoints": true}
+}

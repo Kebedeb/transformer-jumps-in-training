@@ -3,76 +3,46 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+.eggs/
 
 # Virtual environments
 venv/
-ENV/
-env/
 .venv/
-env.bak/
-venv.bak/
+env/
+ENV/
 
-# IDE and editors
+# IDE / OS
 .vscode/
 .idea/
 *.swp
-*.swo
 *~
 .DS_Store
-*.sublime-project
-*.sublime-workspace
+Thumbs.db
 
 # Testing
 .pytest_cache/
 .coverage
 htmlcov/
-.tox/
-.hypothesis/
 
-# Environment variables
+# Environment
 .env
-.env.local
-.env.*.local
+.env.*
 
-# Jupyter Notebook
+# Notebooks
 .ipynb_checkpoints
 *.ipynb
 
-# Research and model files
+# Model files and run outputs (large / regenerable)
 *.pth
 *.pt
 *.pkl
 *.pickle
 model_weights/
-checkpoints/
-logs/
-
-# OS-specific
-Thumbs.db
-.DS_Store
-
-# project-specific
-data/
-tokenization/artifacts/
-tokenization/encoded/
 runs/
+data/
+
+# logs/ is intentionally NOT ignored (it holds the activity log)
 .commit_msg_proposed

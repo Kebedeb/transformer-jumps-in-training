@@ -12,7 +12,7 @@ geometry, weight norms) and test whether any of them leads the behavioural
 jump, and whether the same one works across all three tasks.
 
 Work done in DNU Lab (Dickinson College). The model architecture is adapted
-from a course repo by Prof. MacCormick.
+from a course repo by Prof. MacCormick. (https://github.com/dickinson-comp364-fall2026/hw6)
 
 ---
 

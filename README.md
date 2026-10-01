@@ -154,7 +154,7 @@ Residual index 0 is the embedding; index `i+1` is the output of block `i`.
 
 ```python
 from checkpoints_analysis.wandb_io import fetch_runs
-runs = fetch_runs("precursor-emergence", "induction_v1", "analysis")
+runs = fetch_runs("Jumps-in-training", "induction_v1", "analysis")
 ```
 
 This uses `scan_history()`, which returns every logged row. Do not use

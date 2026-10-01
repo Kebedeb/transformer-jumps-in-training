@@ -1,7 +1,7 @@
 """Compute behavioural + internal signals for every checkpoint in a run.
 
     python -m checkpoints_analysis.analyze runs/<run_dir>
-Writes <run_dir>/signals.csv (one row per checkpoint step).
+Logs to W&B (if enabled) and writes <run_dir>/signals.csv (if save_local_csv).
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from checkpoints_analysis.attention_stats import attention_stats
 from checkpoints_analysis.representation_stats import representation_stats, weight_stats
 from config_utils import load_config
 from tasks import build_task
+from tracking import init_tracker
 from train_transformer_helpers import evaluate, save_metrics_csv
 from transformer_helper import (
     find_latest_run_dir, list_checkpoints, load_model_from_checkpoint, resolve_device,
@@ -22,7 +23,7 @@ from transformer_helper import (
 
 
 @torch.no_grad()
-def analyze_run(run_dir: Path, device: str = "auto", probe_size: int = 256) -> Path:
+def analyze_run(run_dir: Path, device: str = "auto", probe_size: int = 256):
     run_dir = Path(run_dir)
     device = resolve_device(device)
     config = load_config(run_dir / "config.json")
@@ -35,24 +36,31 @@ def analyze_run(run_dir: Path, device: str = "auto", probe_size: int = 256) -> P
     if not checkpoints:
         raise FileNotFoundError(f"No checkpoints found in {run_dir / 'checkpoints'}")
 
+    tracker = init_tracker(config, name=f"{run_dir.name}-signals",
+                           job_type="analysis", run_dir=run_dir)
     rows, prev_resid = [], None
-    for step, path in checkpoints:
-        model, _ = load_model_from_checkpoint(path, device)
-        row: dict[str, float] = {"step": step}
-        row.update(evaluate(model, eval_sets, device))
-        _, _, internals = model(probe_x.to(device), return_internals=True)
-        row.update(attention_stats(internals["attn"], target_mask))
-        row.update(representation_stats(internals["resid"], prev_resid))
-        row.update(weight_stats(model))
-        prev_resid = [r.detach().cpu() for r in internals["resid"]]
-        rows.append(row)
-        if len(rows) % 20 == 0:
-            print(f"analyzed {len(rows)}/{len(checkpoints)} checkpoints")
+    try:
+        for step, path in checkpoints:
+            model, _ = load_model_from_checkpoint(path, device)
+            row: dict[str, float] = {"step": step}
+            row.update(evaluate(model, eval_sets, device))
+            _, _, internals = model(probe_x.to(device), return_internals=True)
+            row.update(attention_stats(internals["attn"], target_mask))
+            row.update(representation_stats(internals["resid"], prev_resid))
+            row.update(weight_stats(model))
+            prev_resid = [r.detach().cpu() for r in internals["resid"]]
+            rows.append(row)
+            tracker.log(row)
+            if len(rows) % 20 == 0:
+                print(f"analyzed {len(rows)}/{len(checkpoints)} checkpoints")
+    finally:
+        tracker.finish()
 
-    out_path = run_dir / "signals.csv"
-    save_metrics_csv(out_path, rows)
-    print(f"Wrote {out_path}")
-    return out_path
+    if config.get("output", {}).get("save_local_csv", True):
+        out_path = run_dir / "signals.csv"
+        save_metrics_csv(out_path, rows)
+        print(f"Wrote {out_path}")
+    return rows
 
 
 def main() -> None:

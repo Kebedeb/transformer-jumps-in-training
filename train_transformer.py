@@ -14,6 +14,7 @@ import torch
 from config_utils import create_run_dir, load_config, save_config_copy
 from seed_utils import get_seed, make_torch_generator, seed_everything
 from tasks import build_task
+from tracking import init_tracker
 from train_transformer_helpers import (
     apply_config_overrides, evaluate, load_experiment_settings,
     make_checkpoint_steps, save_checkpoint, save_metrics_csv,
@@ -50,6 +51,10 @@ def train(config: dict) -> Path | None:
         run_dir = create_run_dir(config)
         save_config_copy(config, run_dir)
 
+    run_name = run_dir.name if run_dir is not None else str(
+        config.get("experiment_name", "experiment"))
+    tracker = init_tracker(config, name=run_name, job_type="train", run_dir=run_dir)
+
     ckpt_steps = set(make_checkpoint_steps(s.training.train_steps, s.checkpoints))
     save_ckpts = run_dir is not None and s.output.save_checkpoints
     eval_sets = task.eval_sets()
@@ -75,6 +80,7 @@ def train(config: dict) -> Path | None:
                "grad_norm": grad_norm, "weight_norm": weight_norm,
                **evaluate(model, eval_sets, device)}
         rows.append(row)
+        tracker.log({k: v for k, v in row.items() if v == v})  # drop NaN (step 0)
         shown = " | ".join(f"{k} {v:.4f}" for k, v in row.items() if k != "step")
         print(f"step {step:6d} | {shown}")
 
@@ -98,8 +104,9 @@ def train(config: dict) -> Path | None:
                 log_row(step, float(loss.item()), grad_norm)
             maybe_checkpoint(step)
     finally:
-        if run_dir is not None:
+        if run_dir is not None and s.output.save_local_csv:
             save_metrics_csv(run_dir / "metrics.csv", rows)
+        tracker.finish()
     return run_dir
 
 

@@ -9,5 +9,7 @@
                "learning_rate": 0.001, "weight_decay": 0.01, "beta1": 0.9, "beta2": 0.999},
   "checkpoints": {"dense_until": 5000, "dense_every": 50, "sparse_every": 500,
                   "save_optimizer": false},
-  "output": {"create_run_dir": true, "save_checkpoints": true}
+  "output": {"create_run_dir": true, "save_checkpoints": true},
+  "wandb": {"enabled": true, "project": "precursor-emergence", "entity": null,
+            "mode": "online", "tags": ["icl"]}
 }

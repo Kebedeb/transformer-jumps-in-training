@@ -8,5 +8,7 @@
                "learning_rate": 0.001, "weight_decay": 1.0, "beta1": 0.9, "beta2": 0.98},
   "checkpoints": {"dense_until": 30000, "dense_every": 100, "sparse_every": 0,
                   "save_optimizer": false},
-  "output": {"create_run_dir": true, "save_checkpoints": true}
+  "output": {"create_run_dir": true, "save_checkpoints": true},
+  "wandb": {"enabled": true, "project": "precursor-emergence", "entity": null,
+            "mode": "online", "tags": ["grokking"]}
 }

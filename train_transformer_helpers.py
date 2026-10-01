@@ -58,6 +58,12 @@ class ExperimentSettings:
     checkpoints: CheckpointSettings
     output: OutputSettings
 
+@dataclass(frozen=True)
+class OutputSettings:
+    create_run_dir: bool = True
+    save_checkpoints: bool = True
+    save_local_csv: bool = True      # keep metrics.csv / signals.csv as a backup
+
 
 def parse_override_value(raw_value: str):
     """Parse a raw override value and convert it to the appropriate type."""
@@ -151,6 +157,7 @@ def load_experiment_settings(config: dict[str, Any], device: str) -> ExperimentS
         output=OutputSettings(
             create_run_dir=bool(o.get("create_run_dir", True)),
             save_checkpoints=bool(o.get("save_checkpoints", True)),
+            save_local_csv=bool(o.get("save_local_csv", True)),
         ),
     )
 

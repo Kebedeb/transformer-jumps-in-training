@@ -7,7 +7,7 @@ build/
 dist/
 *.egg-info/
 .eggs/
-
+wandb/
 # Virtual environments
 venv/
 .venv/

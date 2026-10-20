@@ -22,7 +22,7 @@ class ModelTests(unittest.TestCase):
         logits, loss = m(x, torch.randint(0, 16, (4, 6)))
         self.assertEqual(logits.shape, (4, 6, 16))
         self.assertEqual(loss.shape, torch.Size([]))
-
+    
     def test_internals_shapes(self):
         m = make()
         x = torch.randint(0, 16, (3, 5))

@@ -63,6 +63,9 @@ def train(config: dict) -> Path | None:
     print(f"Task: {task.name} | device: {device} | seed: {seed} | run dir: {run_dir}")
     print(f"Model: {model_kwargs} | params: "
           f"{sum(p.numel() for p in model.parameters())}")
+    print(f"Optimizer: lr={s.training.learning_rate} | "
+          f"warmup_steps={s.training.warmup_steps} | "
+          f"grad_clip={s.training.grad_clip}")                          # NEW
 
     def maybe_checkpoint(step: int) -> None:
         if save_ckpts and step in ckpt_steps:
@@ -89,6 +92,12 @@ def train(config: dict) -> Path | None:
     try:
         log_row(0, float("nan"), float("nan"))
         for step in range(1, s.training.train_steps + 1):
+            # NEW: linear learning-rate warmup (off when warmup_steps == 0).
+            if s.training.warmup_steps > 0:
+                scale = min(1.0, step / s.training.warmup_steps)
+                for group in optimizer.param_groups:
+                    group["lr"] = s.training.learning_rate * scale
+
             x, y = task.train_batch(s.training.batch_size, data_gen)
             x, y = x.to(device), y.to(device)
 
@@ -96,8 +105,13 @@ def train(config: dict) -> Path | None:
             _, loss = model(x, y)
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
+            # NEW: gradient clipping (off when grad_clip == 0). The returned
+            # value is the norm BEFORE clipping, so the logged grad_norm stays
+            # comparable across runs with and without clipping.
             grad_norm = float(torch.nn.utils.clip_grad_norm_(
-                model.parameters(), max_norm=float("inf")))
+                model.parameters(),
+                max_norm=s.training.grad_clip if s.training.grad_clip > 0
+                else float("inf")))
             optimizer.step()
 
             if step % s.training.eval_interval == 0 or step == s.training.train_steps:

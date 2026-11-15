@@ -30,6 +30,8 @@ class TrainingSettings:
     weight_decay: float = 0.0
     beta1: float = 0.9
     beta2: float = 0.999
+    warmup_steps: int = 100     # linear LR warmup; 0 = off
+    grad_clip: float = 0.0     # max grad norm; 0 = off
 
 
 @dataclass(frozen=True)
@@ -147,6 +149,8 @@ def load_experiment_settings(config: dict[str, Any], device: str) -> ExperimentS
             weight_decay=float(t.get("weight_decay", 0.0)),
             beta1=float(t.get("beta1", 0.9)),
             beta2=float(t.get("beta2", 0.999)),
+            warmup_steps=int(t.get("warmup_steps", 0)),
+            grad_clip=float(t.get("grad_clip", 0.0)),
         ),
         checkpoints=CheckpointSettings(
             dense_until=int(c.get("dense_until", 1000)),

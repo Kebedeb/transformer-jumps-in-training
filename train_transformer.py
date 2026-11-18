@@ -99,6 +99,8 @@ def train(config: dict) -> Path | None:
                     group["lr"] = s.training.learning_rate * scale
 
             x, y = task.train_batch(s.training.batch_size, data_gen)
+            if s.training.shuffle_targets:   # control: no learnable structure
+                y = y[torch.randperm(y.size(0), generator=data_gen)]
             x, y = x.to(device), y.to(device)
 
             # Cross-entropy over supervised positions only (y == -100 ignored).

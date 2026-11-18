@@ -32,7 +32,7 @@ class TrainingSettings:
     beta2: float = 0.999
     warmup_steps: int = 100     # linear LR warmup; 0 = off
     grad_clip: float = 0.0     # max grad norm; 0 = off
-
+    shuffle_targets: bool = False   # control: decouple targets from inputs
 
 @dataclass(frozen=True)
 class CheckpointSettings:
@@ -151,6 +151,7 @@ def load_experiment_settings(config: dict[str, Any], device: str) -> ExperimentS
             beta2=float(t.get("beta2", 0.999)),
             warmup_steps=int(t.get("warmup_steps", 0)),
             grad_clip=float(t.get("grad_clip", 0.0)),
+            shuffle_targets=bool(t.get("shuffle_targets", False)),
         ),
         checkpoints=CheckpointSettings(
             dense_until=int(c.get("dense_until", 1000)),

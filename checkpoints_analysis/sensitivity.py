@@ -1,12 +1,16 @@
 """S1 sensitivity grid for the pre-registered precursor analysis (docs/hypothesis.md).
 
     python -m checkpoints_analysis.sensitivity          # writes logs/sensitivity_results.md
+    python -m checkpoints_analysis.sensitivity --seeds 6,7,8,9,10 --out logs/sensitivity_batch2.md
 
 Uses the analysis functions of checkpoints_analysis/precursor_analysis.py unchanged
 (its defaults are the pre-registered values). Each variant changes ONE parameter
-from the default; no other parameters are tried. Batch-1 main runs only
-(seeds 1-5; 1-4 for grokking). Writes only the report: no figures, and
-logs/precursor_results.md is read (section 9 list) but never written.
+from the default; no other parameters are tried. --seeds selects the main runs
+(default: batch 1 = seeds 1-5; 1-4 for grokking, whose seed 5 is _INCOMPLETE).
+Writes only the report: no figures. For batch 1, logs/precursor_results.md is
+read (section 9 list) but never written. For any other seed set, t50 is checked
+against, and the window-limited list read from, logs/confirmation_results.md
+(sections 3.1 and 11), which is never written.
 """
 
 from __future__ import annotations
@@ -22,6 +26,32 @@ from checkpoints_analysis import precursor_analysis as pa
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 BATCH1_SEEDS = {"induction": {1, 2, 3, 4, 5}, "icl": {1, 2, 3, 4, 5}, "grokking": {1, 2, 3, 4}}
+DEFAULT_SEEDS = {1, 2, 3, 4, 5}
+BATCH2_SEEDS = {6, 7, 8, 9, 10}
+CONFIRMATION_REPORT = REPO_ROOT / "logs" / "confirmation_results.md"
+
+
+def parse_seeds(s):
+    return {int(x) for x in s.split(",") if x.strip()}
+
+
+def batch_label(seeds):
+    if seeds == DEFAULT_SEEDS:
+        return "batch 1"
+    if seeds == BATCH2_SEEDS:
+        return "batch 2"
+    return "seeds " + ",".join(map(str, sorted(seeds)))
+
+
+def parse_confirmation_t50(path: Path):
+    """{(task, seed): t50} from the per-run table (section 3.1) of confirmation_results.md."""
+    sec = path.read_text(encoding="utf-8").split("### 3.1", 1)[1].split("### 3.2", 1)[0]
+    out = {}
+    for line in sec.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) > 3 and cells[0] in pa.TASK_ORDER and cells[2].isdigit():
+            out[(cells[0], int(cells[2]))] = int(cells[3])
+    return out
 
 # (variant id, description, CLI args passed to precursor_analysis.parse_args)
 VARIANTS = [
@@ -39,15 +69,30 @@ VARIANTS = [
 WINDOW_VARIANTS = ["default", "ref5-15", "ref10-40"]
 
 
-def run_variant(cli):
-    a = pa.parse_args(cli)
+def run_variant(cli, seeds=DEFAULT_SEEDS):
+    a = pa.parse_args(["--seeds", ",".join(map(str, sorted(seeds)))] + cli)
     runs, _ = pa.load_runs(a)
-    runs = [r for r in runs if r["seed"] in BATCH1_SEEDS[r["task"]]]
-    mismatches, _ = pa.check_t50(runs, a)
-    # check_t50 also flags run_results rows absent from `runs`; batch filtering
-    # can only remove seeds outside batch 1, so ignore exactly those.
-    mismatches = [m for m in mismatches if "not among the runs" not in m
-                  or any(f"{t} seed {s} " in m for t in BATCH1_SEEDS for s in BATCH1_SEEDS[t])]
+    runs = [r for r in runs if r["seed"] in seeds]
+    if seeds <= DEFAULT_SEEDS:
+        mismatches, _ = pa.check_t50(runs, a)
+        # check_t50 also flags run_results rows absent from `runs`; batch filtering
+        # can only remove seeds outside the selected set, so ignore exactly those.
+        mismatches = [m for m in mismatches if "not among the runs" not in m
+                      or any(f"{t} seed {s} " in m for t in BATCH1_SEEDS for s in BATCH1_SEEDS[t]
+                             if s in seeds)]
+    else:
+        # logs/run_results.md has batch-1 rows only. Stays-above t50 is checked against the
+        # per-run table of logs/confirmation_results.md; first-crossing t50 has no reference
+        # table for these seeds and is not checked.
+        mismatches = []
+        if a.t50_mode == "stays_above":
+            ref = parse_confirmation_t50(CONFIRMATION_REPORT)
+            for r in runs:
+                if ref.get((r["task"], r["seed"])) != r["t50"]:
+                    mismatches.append(f"{r['task']} seed {r['seed']}: computed t50={r['t50']}, "
+                                      f"{CONFIRMATION_REPORT.name} t50={ref.get((r['task'], r['seed']))}")
+        if any(r["t50"] is None for r in runs):
+            mismatches.append("a run has no t50 under this t50 mode")
     if mismatches:
         print("STOP: t50 differs from logs/run_results.md; nothing written.", file=sys.stderr)
         for m in mismatches:
@@ -66,20 +111,28 @@ def run_variant(cli):
             "first_cand": first_cand}
 
 
-def parse_window_limited(path: Path):
-    """The window-limited list from section 9 of logs/precursor_results.md."""
+def parse_window_limited(path: Path, batch1=True):
+    """The window-limited list from section 9 of logs/precursor_results.md (batch 1) or the
+    batch-2 line of section 11 of logs/confirmation_results.md (any other seed set)."""
     text = path.read_text(encoding="utf-8")
-    sec = text.split("## 9.", 1)[1]
-    line = next(l for l in sec.splitlines() if l.startswith("- Onset at the first checkpoint"))
-    items = line.split(": ", 1)[1].split("; ")
-    label_to_sig = {pa.sig_label(s): s for s in pa.SIGNALS}
+    if batch1:
+        sec = text.split("## 9.", 1)[1]
+        line = next(l for l in sec.splitlines() if l.startswith("- Onset at the first checkpoint"))
+        items = line.split(": ", 1)[1].split("; ")
+    else:
+        sec = text.split("## 11.", 1)[1]
+        line = next(l for l in sec.splitlines()
+                    if l.startswith("- batch 2: ") and "window-limited onsets" in l)
+        items = line.split(": ", 2)[2].split("; ")
+    label_to_sig = {pa.sig_label(s): s for s in pa.SIGNALS + [pa.POS_CONTROL]}
     out = []
     for it in items:
         m = re.fullmatch(r"(\w+) seed (\d+) `(.+)`", it.strip())
         if not m:
             sys.exit(f"cannot parse section-9 item: {it!r}")
         out.append((m.group(1), int(m.group(2)), label_to_sig[m.group(3)]))
-    n_claimed = int(re.search(r"in (\d+) signal-runs", line).group(1))
+    n_claimed = int(re.search(r"in (\d+) signal-runs" if batch1 else r"batch 2: (\d+) window",
+                              line).group(1))
     if n_claimed != len(out):
         sys.exit(f"section 9 says {n_claimed} signal-runs but lists {len(out)}")
     return out
@@ -99,10 +152,21 @@ def vcell(v):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", type=Path, default=REPO_ROOT / "logs" / "sensitivity_results.md")
-    ap.add_argument("--default-report", type=Path, default=REPO_ROOT / "logs" / "precursor_results.md")
+    ap.add_argument("--default-report", type=Path, default=None,
+                    help="report holding the window-limited list (default: logs/precursor_results.md "
+                         "for batch 1, logs/confirmation_results.md otherwise)")
+    ap.add_argument("--seeds", type=parse_seeds, default=set(DEFAULT_SEEDS),
+                    help="comma-separated main-run seeds (default: batch 1 = 1,2,3,4,5)")
     args = ap.parse_args(argv)
+    is_b1 = args.seeds == DEFAULT_SEEDS
+    if args.default_report is None:
+        args.default_report = (REPO_ROOT / "logs" / "precursor_results.md" if is_b1
+                               else CONFIRMATION_REPORT)
+    if not is_b1 and args.out.resolve().name == "sensitivity_results.md":
+        sys.exit("refusing to overwrite the batch-1 report with a different seed set; pass --out")
+    blabel = batch_label(args.seeds)
 
-    res = {vid: run_variant(cli) for vid, _, cli in VARIANTS}
+    res = {vid: run_variant(cli, args.seeds) for vid, _, cli in VARIANTS}
     base = res["default"]
     keys = [(t, s) for s in pa.SIGNALS for t in pa.TASK_ORDER]
 
@@ -114,14 +178,17 @@ def main(argv=None):
              for vid, _, _ in VARIANTS[1:]}
     cand = {vid: [c["signal"] for c in res[vid]["cross"] if c["candidate"]] for vid, _, _ in VARIANTS}
 
-    L = ["# S1 sensitivity grid (batch 1)\n",
-         "Generated by `python -m checkpoints_analysis.sensitivity`. Do not edit by hand.\n"]
+    cmd = "python -m checkpoints_analysis.sensitivity" + (
+        "" if is_b1 else f" --seeds {','.join(map(str, sorted(args.seeds)))} --out "
+        + args.out.resolve().relative_to(REPO_ROOT).as_posix())
+    L = [f"# S1 sensitivity grid ({blabel})\n",
+         f"Generated by `{cmd}`. Do not edit by hand.\n"]
 
     # ---- summary
     n_flip_keys = sorted({k for d in diffs.values() for k in d}, key=keys.index)
     any_cand = sorted({s for v in cand.values() for s in v})
     L.append("## Summary\n")
-    L.append(f"- {len(VARIANTS) - 1} one-at-a-time variants plus the default, on batch-1 runs "
+    L.append(f"- {len(VARIANTS) - 1} one-at-a-time variants plus the default, on {blabel.replace(' ', '-')} runs "
              f"({', '.join(f'{t} {len([r for r in base['runs'] if r['task'] == t])}' for t in pa.TASK_ORDER)}).")
     L.append("- Shared candidate (specificity pending) in any variant: "
              + ("none. No variant produces a signal that is a precursor in all three tasks with "
@@ -155,7 +222,11 @@ def main(argv=None):
     L.append("")
     L.append("All other parameters are at the pre-registered default. With `t50fc`, onset "
              "windows, leads and minimum leads are computed from the first-crossing t50 "
-             "(checked against the `FC t50` column of logs/run_results.md).\n")
+             + ("(checked against the `FC t50` column of logs/run_results.md).\n" if is_b1 else
+                "(not checked against a reference table: logs/run_results.md has batch-1 rows only "
+                "and logs/confirmation_results.md reports stays-above t50 only). Stays-above t50 "
+                "is checked against the per-run table (section 3.1) of "
+                "logs/confirmation_results.md.\n"))
 
     # ---- per-variant verdicts (compact matrix)
     L.append("## Per-task precursor verdicts by variant\n")
@@ -216,9 +287,16 @@ def main(argv=None):
     L.append("")
 
     # ---- drift diagnostic
-    wl = parse_window_limited(args.default_report)
+    wl = parse_window_limited(args.default_report, batch1=is_b1)
+    if not is_b1:
+        # the list read from the confirmation report must equal the default variant's own list
+        own = {(x["task"], x["seed"], x["signal"]) for x in base["rows"] if x["onset_at_first_candidate"]}
+        if own != set(wl):
+            sys.exit(f"window-limited list in {args.default_report.name} differs from the default "
+                     f"variant: {sorted(own ^ set(wl))}")
+    where = "section 9" if is_b1 else "section 11 (batch-2 line)"
     L.append("## Drift diagnostic: window-limited signal-runs\n")
-    L.append(f"The {len(wl)} signal-runs listed in section 9 of `{args.default_report.name}` had their "
+    L.append(f"The {len(wl)} signal-runs listed in {where} of `{args.default_report.name}` had their "
              "default onset at the first checkpoint after the reference window. For each "
              "reference window, the table gives the onset and the first onset candidate "
              "(first checkpoint with step > ref_hi × t50). “Pinned” = onset equals the first "

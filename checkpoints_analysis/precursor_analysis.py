@@ -55,6 +55,10 @@ def parse_args(argv=None):
                     help="jump table to check t50 against (step 1)")
     io.add_argument("--out", type=Path, default=REPO_ROOT / "logs" / "precursor_results.md")
     io.add_argument("--fig-dir", type=Path, default=REPO_ROOT / "logs" / "figures")
+    io.add_argument("--seeds", type=lambda s: {int(x) for x in s.split(",") if x.strip()},
+                    default={1, 2, 3, 4, 5},
+                    help="comma-separated seeds to include (default: batch 1 = 1,2,3,4,5; "
+                         "grokking seed 5 is _INCOMPLETE and never matched)")
     p = ap.add_argument_group("pre-registered parameters (defaults = pre-registered values)")
     p.add_argument("--t50-threshold", type=float, default=0.5)
     p.add_argument("--t50-mode", choices=["stays_above", "first_crossing"], default="stays_above")
@@ -248,6 +252,8 @@ def load_runs(a):
             if not d.is_dir() or d.name.endswith("_INCOMPLETE"):
                 continue
             cfg = json.loads((d / "config.json").read_text())
+            if int(cfg["seed"]) not in a.seeds:
+                continue
             metric = JD_TASKS[task][0]
             _, series = read_metrics(d / "metrics.csv", metric)
             fn = stays_above_step if a.t50_mode == "stays_above" else first_crossing_step

@@ -93,3 +93,38 @@ leads are capped by the reference window, so they may be drift rather than
 precursors. The pre-registered extra-seed rule triggered. Next: control runs
 (no-jump versions of each task), seeds 6-10 as a confirmation batch, and the
 sensitivity checks.
+
+## Nov 18, 2026
+Finished the control runs (no-jump versions of each task) and the confirmation
+seeds 6-10, and wrote the sensitivity checks to logs/sensitivity_results.md.
+Computed signals for the new runs and fixed the control rules in the
+hypothesis doc before looking at them. Next: confirmation and specificity
+analysis, then the architecture and learning-rate stress tests.
+
+
+
+## Report from Claude
+2026-11-19: Ran the pre-registered S3/S4 stress analysis (new script
+checkpoints_analysis/stress_analysis.py, report logs/stress_results.md, figures
+logs/figures/stress_*.png) on the nine runs with seeds 201-203; all were complete and all
+reached a jump. The precursor rule does not say how many of 3 seeds must qualify,
+so both readings (2 of 3 and 3 of 3) are reported without choosing, and
+specificity is not assessed because the controls exist only for the main
+configs. Added a --seeds option to sensitivity.py; with the default seeds it
+reproduces logs/sensitivity_results.md except the git-state provenance lines.
+With seeds 6-10 it wrote logs/sensitivity_batch2.md, where 5 of 18 per-task
+verdicts change in at least one variant and no variant gives a shared candidate.
+Matplotlib does not import under the default Python 3.14 because
+site-packages/PIL/Image.py has been overwritten by an unrelated script, so the
+stress analysis was run with `py -3.13`.
+
+## Nov 19, 2026
+Confirmation and control analysis is done. No signal is a shared precursor
+across all three tasks. Only attention entropy replicates and survives the
+controls, in ICL and grokking, and it goes the opposite direction in grokking.
+Most of the other signals turned out to be generic training drift. Also found
+that grokking took longer in the second batch of seeds, so I'm checking why.
+Running the architecture and learning-rate stress tests next.
+
+
+

@@ -1,0 +1,48 @@
+{
+  "experiment_name": "grokking_ctrl_shuffle",
+  "seed": 103,
+  "device": "auto",
+  "task": {
+    "name": "grokking",
+    "p": 113,
+    "train_frac": 0.3
+  },
+  "model": {
+    "n_layers": 1,
+    "n_heads": 4,
+    "n_embd": 128,
+    "mlp_multiplier": 4
+  },
+  "training": {
+    "batch_size": 100000,
+    "train_steps": 15000,
+    "eval_interval": 100,
+    "learning_rate": 0.001,
+    "weight_decay": 1.0,
+    "beta1": 0.9,
+    "beta2": 0.98,
+    "warmup_steps": 100,
+    "grad_clip": 0.0,
+    "shuffle_targets": true
+  },
+  "checkpoints": {
+    "dense_until": 15000,
+    "dense_every": 100,
+    "sparse_every": 0,
+    "save_optimizer": false
+  },
+  "output": {
+    "create_run_dir": true,
+    "save_checkpoints": true,
+    "save_local_csv": true
+  },
+  "wandb": {
+    "enabled": true,
+    "project": "precursor-emergence",
+    "entity": null,
+    "mode": "online",
+    "tags": [
+      "grokking"
+    ]
+  }
+}

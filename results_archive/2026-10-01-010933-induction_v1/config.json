@@ -1,0 +1,45 @@
+{
+  "experiment_name": "induction_v1",
+  "seed": 1234,
+  "device": "auto",
+  "task": {
+    "name": "induction",
+    "vocab_size": 64,
+    "half_len": 16,
+    "n_eval": 512
+  },
+  "model": {
+    "n_layers": 2,
+    "n_heads": 4,
+    "n_embd": 64,
+    "mlp_multiplier": 4
+  },
+  "training": {
+    "batch_size": 64,
+    "train_steps": 300,
+    "eval_interval": 100,
+    "learning_rate": 0.001,
+    "weight_decay": 0.01,
+    "beta1": 0.9,
+    "beta2": 0.999
+  },
+  "checkpoints": {
+    "dense_until": 3000,
+    "dense_every": 50,
+    "sparse_every": 0,
+    "save_optimizer": false
+  },
+  "output": {
+    "create_run_dir": true,
+    "save_checkpoints": true
+  },
+  "wandb": {
+    "enabled": false,
+    "project": "precursor-emergence",
+    "entity": null,
+    "mode": "online",
+    "tags": [
+      "induction"
+    ]
+  }
+}

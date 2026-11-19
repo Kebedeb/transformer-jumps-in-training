@@ -109,3 +109,16 @@ make its jump time less sharp.
   6. Specificity is evaluated per control type (C1, C2), 3 seeds each: a signal is
      non-specific for a task if it gets a counting onset in at least 2 of 3
      seeds of either control type.
+
+  2026-11-19 (written AFTER seeing confirmation_results.md; post hoc):
+  7. "Qualifies" in Partial/Refutes is reported under both readings (A: confirmed
+     and specific; B: confirmed only). Both give Partial.
+  8. When Partial and Inconclusive conditions are both literally met, the
+     headline is Partial and the Inconclusive triggers are reported as
+     limitations. The pre-registration did not rank the labels.
+  9. Any analysis not in the pre-registration (e.g. direction-agnostic entropy
+     change) is labelled exploratory and cannot change the outcome label.
+  10. S3/S4 are robustness checks. They are reported under both readings of the
+      n=3 precursor rule (A: at least 2 of 3; B: 3 of 3), and they do not
+      change the outcome label. A claim that fails in a stress config is
+      reported as a limitation of that claim.

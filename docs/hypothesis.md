@@ -88,5 +88,24 @@ induction-ICL agreement is less surprising than agreement with grokking;
 grokking shows training spikes and a staircase in validation accuracy that
 make its jump time less sharp.
 
-## Deviations
-(none yet)
+## Deviations and clarifications
+- 2026-11-17 (after seeing batch-1 signals, before any seed 6-10 run was
+  analysed):
+  1. Seeds 1-5 (1-4 for grokking) are batch 1 and have been seen. Seeds 6-10 are
+     the S2 confirmation batch, analysed on their own with the same rules (4 of 5
+     seeds per task). A signal is confirmed only if it qualifies in both batches.
+  2. Onsets pinned at the first checkpoint after the reference window are
+     reported as "window-limited". Their normalized leads are lower bounds, not
+     lead sizes. No decision rule is changed.
+  3. Exploratory reading aid, not used for verdicts: compare each lead with the
+     rise time (t90 - t50); a lead shorter than the rise overlaps the transition.
+  4. A control run counts only if its main metric never stays at or above 0.5
+     (same stays-above rule as t50). Controls that reach 0.5 are reported but
+     not used for specificity.
+  5. Controls are anchored at the batch-1 mean t50 (induction 296, ICL 816,
+     grokking 7525), snapped to the nearest checkpoint step, and analysed with
+     the same onset rule. A control onset counts if it exists and lead >=
+     minimum lead (any direction; direction is reported).
+  6. Specificity is evaluated per control type (C1, C2), 3 seeds each: a signal is
+     non-specific for a task if it gets a counting onset in at least 2 of 3
+     seeds of either control type.
